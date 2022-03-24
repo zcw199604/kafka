@@ -684,8 +684,15 @@ public class Worker {
         // Include any unknown worker configs so consumer configs can be set globally on the worker
         // and through to the task
         Map<String, Object> consumerProps = new HashMap<>();
+        String string = connConfig.getString(ConnectorConfig.CONNECT_PREFIX_CONFIG);
+        log.info("CONNECT_PREFIX_CONFIG value is [{}]", string);
+        if (string != null && !"".equals(string)) {
+            consumerProps.put(ConsumerConfig.GROUP_ID_CONFIG, string);
+        } else {
+            consumerProps.put(ConsumerConfig.GROUP_ID_CONFIG,
+                    SinkUtils.consumerGroupId(id.connector()));
+        }
 
-        consumerProps.put(ConsumerConfig.GROUP_ID_CONFIG, SinkUtils.consumerGroupId(id.connector()));
         consumerProps.put(ConsumerConfig.CLIENT_ID_CONFIG, "connector-consumer-" + id);
         consumerProps.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG,
                   Utils.join(config.getList(WorkerConfig.BOOTSTRAP_SERVERS_CONFIG), ","));

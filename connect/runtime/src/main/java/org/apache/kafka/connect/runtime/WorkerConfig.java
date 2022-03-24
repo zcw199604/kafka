@@ -270,6 +270,9 @@ public class WorkerConfig extends AbstractConfig {
     protected static final String RESPONSE_HTTP_HEADERS_DOC = "Rules for REST API HTTP response headers";
     protected static final String RESPONSE_HTTP_HEADERS_DEFAULT = "";
 
+    public static final String CONNECT_PREFIX_CONFIG = "connector.group.id.name";
+    public static final String CONNECT_PREFIX_DOC = "Prefix for sink task consumer group.";
+    public static final String CONNECT_PREFIX_DEFAULT = "";
     /**
      * Get a basic ConfigDef for a WorkerConfig. This includes all the common settings. Subclasses can use this to
      * bootstrap their own ConfigDef.
@@ -279,6 +282,8 @@ public class WorkerConfig extends AbstractConfig {
         return new ConfigDef()
                 .define(BOOTSTRAP_SERVERS_CONFIG, Type.LIST, BOOTSTRAP_SERVERS_DEFAULT,
                         Importance.HIGH, BOOTSTRAP_SERVERS_DOC)
+                .define(CONNECT_PREFIX_CONFIG, Type.STRING, CONNECT_PREFIX_DEFAULT,
+                        Importance.MEDIUM, CONNECT_PREFIX_DOC)
                 .define(CLIENT_DNS_LOOKUP_CONFIG,
                         Type.STRING,
                         ClientDnsLookup.USE_ALL_DNS_IPS.toString(),

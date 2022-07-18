@@ -249,6 +249,16 @@ public abstract class AbstractHerder implements Herder, TaskStatus.Listener, Con
         return configBackingStore.snapshot().connectors();
     }
 
+    public static final String DATABASE_PWD = "database.password";
+    public static final String PWD = "password";
+    public static final String CONSUMER_JASS_CONFIG = "database.history.consumer.sasl.jaas.config";
+    public static final String PRODUCER_JASS_CONFIG = "database.history.producer.sasl.jaas.config";
+    public static final String SASL_JAAS_CONFIG = "sasl.jaas.config";
+
+    public static final String PWD_T = "******";
+    public static final String PASSWORD_RE = "password='(.*)'";
+    public static final String PASSWORD_OUT = "password='******'";
+
     @Override
     public ConnectorInfo connectorInfo(String connector) {
         final ClusterConfigState configState = configBackingStore.snapshot();
@@ -257,12 +267,46 @@ public abstract class AbstractHerder implements Herder, TaskStatus.Listener, Con
             return null;
         Map<String, String> config = configState.rawConnectorConfig(connector);
 
+        replace(config);
+
         return new ConnectorInfo(
             connector,
             config,
             configState.tasks(connector),
             connectorTypeForClass(config.get(ConnectorConfig.CONNECTOR_CLASS_CONFIG))
         );
+    }
+
+    public void replace(Map<String, String> config) {
+        if (config.containsKey(DATABASE_PWD)) {
+            config.put(DATABASE_PWD, PWD_T);
+        }
+
+        if (config.containsKey(PWD)) {
+            config.put(PWD, PWD_T);
+        }
+
+        if (config.containsKey(CONSUMER_JASS_CONFIG)) {
+            String s = config.get(CONSUMER_JASS_CONFIG);
+            if (s != null && !"".equals(s)) {
+                config.put(CONSUMER_JASS_CONFIG, s.replaceAll(PASSWORD_RE, PASSWORD_OUT));
+            }
+        }
+
+        if (config.containsKey(PRODUCER_JASS_CONFIG)) {
+            String s = config.get(PRODUCER_JASS_CONFIG);
+            if (s != null && !"".equals(s)) {
+                config.put(PRODUCER_JASS_CONFIG, s.replaceAll(PASSWORD_RE, PASSWORD_OUT));
+            }
+        }
+
+        if (config.containsKey(SASL_JAAS_CONFIG)) {
+            String s = config.get(SASL_JAAS_CONFIG);
+            if (s != null && !"".equals(s)) {
+                config.put(SASL_JAAS_CONFIG, s.replaceAll(PASSWORD_RE, PASSWORD_OUT));
+            }
+        }
+
     }
 
     protected Map<ConnectorTaskId, Map<String, String>> buildTasksConfig(String connector) {

@@ -662,6 +662,14 @@ public class Worker {
         producerProps.put(ProducerConfig.CLIENT_ID_CONFIG, defaultClientId);
         // User-specified overrides
         producerProps.putAll(config.originalsWithPrefix("producer."));
+
+        for (String s : connConfig.originalsStrings().keySet()) {
+            if (s.startsWith("infomover.producer.")) {
+                String key = s.substring("infomover.producer.".length());
+                producerProps.put(key, connConfig.originalsStrings().get(s));
+            }
+        }
+
         //add client metrics.context properties
         ConnectUtils.addMetricsContextProperties(producerProps, config, clusterId);
 

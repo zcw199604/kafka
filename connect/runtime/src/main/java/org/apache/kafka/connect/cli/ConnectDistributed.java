@@ -90,10 +90,11 @@ public class ConnectDistributed {
 
     public Connect startConnect(Map<String, String> workerProps) {
         log.info("Scanning for plugin classes. This might take a moment ...");
+        //1.扫描plugin.path路径，加载插件
         Plugins plugins = new Plugins(workerProps);
         plugins.compareAndSwapWithDelegatingLoader();
         DistributedConfig config = new DistributedConfig(workerProps);
-
+        //2.获取Kafka集群ID
         String kafkaClusterId = ConnectUtils.lookupKafkaClusterId(config);
         log.debug("Kafka cluster ID: {}", kafkaClusterId);
 

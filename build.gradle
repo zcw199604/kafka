@@ -2301,3 +2301,23 @@ task aggregatedJavadoc(type: Javadoc, dependsOn: compileJava) {
   else
     options.links "https://docs.oracle.com/javase/8/docs/api/"
 }
+
+subprojects {
+  apply plugin: 'maven'
+  // 获取本地仓库路径
+  def localRepositoryPath = 'file://F:/maven/repo'
+  //打包至本地仓库配置
+  uploadArchives {
+    repositories {
+      //mavenDeployer 需要依赖 apply plugin: 'maven'
+      mavenDeployer {
+        repository(url: localRepositoryPath)
+        pom.project {
+          name = project.name        // 当前项目名称
+          version = project.version   //当前项目版本  0.0.1
+          groupId = project.group     //  当前项目组  com.xxx
+        }
+      }
+    }
+  }
+}

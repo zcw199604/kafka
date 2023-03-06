@@ -261,21 +261,23 @@ public class Worker {
             final WorkerConnector workerConnector;
             ClassLoader savedLoader = plugins.currentThreadLoader();
             try {
-                // By the time we arrive here, CONNECTOR_CLASS_CONFIG has been validated already
-                // Getting this value from the unparsed map will allow us to instantiate the
-                // right config (source or sink)
+                // 根据配置中Connector class类，从插件classLoader加载这个类
                 final String connClass = connProps.get(ConnectorConfig.CONNECTOR_CLASS_CONFIG);
                 ClassLoader connectorLoader = plugins.delegatingLoader().connectorLoader(connClass);
                 savedLoader = Plugins.compareAndSwapLoaders(connectorLoader);
 
                 log.info("Creating connector {} of type {}", connName, connClass);
+                // 创建该Connector类实例
                 final Connector connector = plugins.newConnector(connClass);
+                // 根据Connector类型不同创建不同的ConnectorConfig配置类
                 final ConnectorConfig connConfig = ConnectUtils.isSinkConnector(connector)
                         ? new SinkConnectorConfig(plugins, connProps)
                         : new SourceConnectorConfig(plugins, connProps, config.topicCreationEnable());
 
                 final OffsetStorageReader offsetReader = new OffsetStorageReaderImpl(
                         offsetBackingStore, connName, internalKeyConverter, internalValueConverter);
+                // 创建WorkerConnector类，其中封装了Connector
+                // WorkerConnector是实现Runnable接口
                 workerConnector = new WorkerConnector(
                         connName, connector, connConfig, ctx, metrics, connectorStatusListener, offsetReader, connectorLoader);
                 log.info("Instantiated connector {} with version {} of type {}", connName, connector.version(), connector.getClass());
@@ -591,11 +593,12 @@ public class Worker {
                 connConfig.errorMaxDelayInMillis(), connConfig.errorToleranceType(), Time.SYSTEM);
         retryWithToleranceOperator.metrics(errorHandlingMetrics);
 
-        // Decide which type of worker task we need based on the type of task.
+        // 判断Task类型是Source还是Sink
         if (task instanceof SourceTask) {
             SourceConnectorConfig sourceConfig = new SourceConnectorConfig(plugins,
                     connConfig.originalsStrings(), config.topicCreationEnable());
             retryWithToleranceOperator.reporters(sourceTaskReporters(id, sourceConfig, errorHandlingMetrics));
+            // 如果配有Transformer,这里构造Transformer链，用于发送前转换消息
             TransformationChain<SourceRecord> transformationChain = new TransformationChain<>(sourceConfig.<SourceRecord>transformations(), retryWithToleranceOperator);
             log.info("Initializing: {}", transformationChain);
             CloseableOffsetStorageReader offsetReader = new OffsetStorageReaderImpl(offsetBackingStore, id.connector(),
@@ -604,6 +607,7 @@ public class Worker {
                     internalKeyConverter, internalValueConverter);
             Map<String, Object> producerProps = producerConfigs(id, "connector-producer-" + id, config, sourceConfig, connectorClass,
                                                                 connectorClientConfigOverridePolicy, kafkaClusterId);
+            // 如果是SourceTask就要创建对应的KafkaProducer，用于向Kafka topic发送数据
             KafkaProducer<byte[], byte[]> producer = new KafkaProducer<>(producerProps);
             TopicAdmin admin;
             Map<String, TopicCreationGroup> topicCreationGroups;
@@ -622,6 +626,7 @@ public class Worker {
                     headerConverter, transformationChain, producer, admin, topicCreationGroups,
                     offsetReader, offsetWriter, config, configState, metrics, loader, time, retryWithToleranceOperator, herder.statusBackingStore(), executor);
         } else if (task instanceof SinkTask) {
+            // 如果配有Transformer,这里构造Transformer链，用于收到消息后发送给SinkTask处理前进行消息转换
             TransformationChain<SinkRecord> transformationChain = new TransformationChain<>(connConfig.<SinkRecord>transformations(), retryWithToleranceOperator);
             log.info("Initializing: {}", transformationChain);
             SinkConnectorConfig sinkConfig = new SinkConnectorConfig(plugins, connConfig.originalsStrings());
@@ -630,6 +635,7 @@ public class Worker {
                     keyConverter, valueConverter, headerConverter);
 
             Map<String, Object> consumerProps = consumerConfigs(id, config, connConfig, connectorClass, connectorClientConfigOverridePolicy, kafkaClusterId);
+            // 如果是SinkTask，创建对应的KafkaConsumer，同一组的Task的Consumer group id由生成Connector名字组成
             KafkaConsumer<byte[], byte[]> consumer = new KafkaConsumer<>(consumerProps);
 
             return new WorkerSinkTask(id, (SinkTask) task, statusListener, initialState, config, configState, metrics, keyConverter,
